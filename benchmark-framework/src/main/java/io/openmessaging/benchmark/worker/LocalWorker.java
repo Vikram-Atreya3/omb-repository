@@ -262,7 +262,7 @@ public class LocalWorker implements Worker, ConsumerCallback {
     }
 
     @Override
-    public void stopAll() throws IOException {
+    public synchronized void stopAll() throws IOException {
         testCompleted = true;
         consumersArePaused = false;
         producersArePaused = false;
@@ -273,16 +273,13 @@ public class LocalWorker implements Worker, ConsumerCallback {
             for (BenchmarkProducer producer : producers) {
                 producer.close();
             }
-            producers.clear();
 
             for (BenchmarkConsumer consumer : consumers) {
                 consumer.close();
             }
-            consumers.clear();
 
             if (benchmarkDriver != null) {
                 benchmarkDriver.close();
-                benchmarkDriver = null;
             }
         } catch (Exception e) {
             //Think about killing the program in-case the exception is non-recoverable.
