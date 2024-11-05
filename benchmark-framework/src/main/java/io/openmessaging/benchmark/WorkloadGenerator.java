@@ -89,6 +89,7 @@ class WorkloadGenerator implements AutoCloseable {
         if (workload.consumerPerSubscription > 0) {
             createConsumers(topics);
         }
+        Thread.sleep(300000);
 
         worker.startLoad(producerWorkAssignment);
 
