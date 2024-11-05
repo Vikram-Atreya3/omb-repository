@@ -49,6 +49,7 @@ import java.util.concurrent.TimeUnit;
 
 class WorkloadGenerator implements AutoCloseable {
 
+    private final BenchmarkingRunArguments arguments;
     private final Workload workload;
     private final Worker worker;
     private final String uniqueRunId;
@@ -61,6 +62,7 @@ class WorkloadGenerator implements AutoCloseable {
     private volatile boolean needToWaitForBacklogDraining = false;
 
     public WorkloadGenerator(BenchmarkingRunArguments arguments, Worker benchmarkingWorker) {
+        this.arguments = arguments;
         this.workload = arguments.getWorkload();
         this.worker = benchmarkingWorker;
         this.uniqueRunId = arguments.getRunID();
@@ -78,7 +80,11 @@ class WorkloadGenerator implements AutoCloseable {
 
     public TestResult run() throws Exception {
         Timer timer = new Timer();
-        List<Topic> topics = worker.createTopics(new TopicsInfo(workload.topics, workload.partitionsPerTopic, workload.topicName));
+        final StringBuilder topicPrefixBuilder = new StringBuilder()
+                .append(arguments.getTestName());
+        if (arguments.getTestSuiteName() != null)
+            topicPrefixBuilder.append("-").append(arguments.getTestSuiteName());
+        List<Topic> topics = worker.createTopics(new TopicsInfo(workload.topics, workload.partitionsPerTopic, workload.topicName, topicPrefixBuilder.toString()));
         log.info("Created {} topics in {} ms", topics.size(), timer.elapsedMillis());
 
         // Notify other workers about these topics

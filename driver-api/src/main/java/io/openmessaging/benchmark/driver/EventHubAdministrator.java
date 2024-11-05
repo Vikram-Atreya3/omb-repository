@@ -15,7 +15,10 @@ import io.openmessaging.benchmark.credential.adapter.CredentialProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import static io.openmessaging.benchmark.appconfig.adapter.EnvironmentName.Production;
 
@@ -25,9 +28,10 @@ public class EventHubAdministrator {
     static ConfigProvider configProvider;
     static CredentialProvider credentialProvider;
     static AzureEnvironment azureEnvironment;
-    TokenCredential sharedCSC;
-    AzureProfile sharedAzureProfile;
-    EventHubsManager manager;
+    private final TokenCredential sharedCSC;
+    private final AzureProfile sharedAzureProfile;
+    private final EventHubsManager manager;
+    private final EventHubHTTPCrud eventHubHTTPCrud;
 
     public EventHubAdministrator(NamespaceMetadata namespaceMetadata) {
         credentialProvider = CredentialProvider.getInstance();
@@ -49,6 +53,7 @@ public class EventHubAdministrator {
         sharedAzureProfile = createAzureProfile(namespaceMetadata);
         manager = EventHubsManager.configure()
                 .authenticate(sharedCSC, sharedAzureProfile);
+        eventHubHTTPCrud = new EventHubHTTPCrud(metadata, configProvider);
     }
 
     private static AzureProfile createAzureProfile(NamespaceMetadata metadata) {
@@ -65,22 +70,23 @@ public class EventHubAdministrator {
                 .build();
     }
 
-    public EventHubsManager getManager() {
-        return manager;
-    }
-
     public void createTopic(String topic, int partitions) {
         try {
             final EventHub eventHub = manager.namespaces().eventHubs().getByName(metadata.resourceGroup, metadata.namespaceName, topic);
             log.info("Reusing the existing topic as it exists - " + eventHub.name() + " with partition counts " + (long) eventHub.partitionIds().size());
         } catch (Exception e) {
             log.info(" Creating new topic with Topic Name: " + topic);
-            manager.namespaces()
-                    .eventHubs()
-                    .define(topic)
-                    .withExistingNamespace(metadata.resourceGroup, metadata.namespaceName)
-                    .withPartitionCount(partitions)
-                    .create();
+            try {
+                manager.namespaces()
+                        .eventHubs()
+                        .define(topic)
+                        .withExistingNamespace(metadata.resourceGroup, metadata.namespaceName)
+                        .withPartitionCount(partitions)
+                        .create();
+            } catch (Exception ex) {
+                log.error("ARM call failed while creating topic {} in namespace {}. Error Reason - {}", topic, metadata.namespaceName, ex.getMessage());
+                eventHubHTTPCrud.createTopic(topic, partitions);
+            }
         }
     }
 
@@ -89,11 +95,31 @@ public class EventHubAdministrator {
         return eventHubNamespaceAuthorizationRules.stream().filter(authRule -> authRule.rights().contains(AccessRights.MANAGE)).findFirst().orElseThrow(RuntimeException::new);
     }
 
+    public List<EventHub> listTopicForNamespace() {
+        try {
+            return manager.namespaces().eventHubs().listByNamespace(metadata.resourceGroup, metadata.namespaceName).stream().collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("ARM Error Caught - {}", e.getMessage());
+            log.error("Could not fetch eventHub for namespace {}. Returning Empty List", metadata.namespaceName);
+            return new ArrayList<>();
+        }
+    }
+
     public void createConsumerGroupIfNotPresent(String topicName, String subscriptionName) {
-        manager
-                .consumerGroups()
-                .define(subscriptionName)
-                .withExistingEventHub(metadata.resourceGroup, metadata.namespaceName, topicName)
-                .create();
+        try {
+            manager
+                    .consumerGroups()
+                    .define(subscriptionName)
+                    .withExistingEventHub(metadata.resourceGroup, metadata.namespaceName, topicName)
+                    .create();
+        } catch (Exception e) {
+            log.error("ARM Call Failed while creating consumerGroup {} for topic {} in namespace{}", subscriptionName, topicName, metadata.namespaceName);
+            log.error("ARM Error Caught - {}", e.getMessage());
+            eventHubHTTPCrud.createConsumerGroupIfNotPresent(topicName, subscriptionName);
+        }
+    }
+
+    public void deleteTopic(String topicName) {
+        manager.namespaces().eventHubs().deleteByName(metadata.resourceGroup, metadata.namespaceName, topicName);
     }
 }

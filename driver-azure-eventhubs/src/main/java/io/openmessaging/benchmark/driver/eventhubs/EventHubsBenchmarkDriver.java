@@ -84,11 +84,11 @@ public class EventHubsBenchmarkDriver implements BenchmarkDriver {
         if (driverConfiguration.reset) {
             String resourceGroup = driverConfiguration.namespaceMetadata.resourceGroup;
             log.info("Deleting existing entities");
-            for (EventHub eh : eventHubAdministrator.getManager().namespaces().eventHubs().listByNamespace(resourceGroup, namespace)) {
+            for (EventHub eh : eventHubAdministrator.listTopicForNamespace()) {
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        eventHubAdministrator.getManager().namespaces().eventHubs().deleteByName(resourceGroup, namespace, eh.name());
+                        eventHubAdministrator.deleteTopic(eh.name());
                         log.info("Successfully deleted entity "+ eh.name());
                     }
                 }).start();

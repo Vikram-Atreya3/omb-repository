@@ -30,6 +30,7 @@ public class BenchmarkingRunOrchestrator {
     public static TestResult executeBenchmarkingRun(BenchmarkingRunArguments arguments) {
         log.info("--------------- WORKLOAD : {} --- DRIVER : {}---------------", arguments.getWorkload().name, arguments.getDriver().name);
         arguments.validate();
+        stopDistributedWorkers();
         benchmarkWorker = getWorker(arguments);
         return runTestAndReturnResult(arguments);
     }

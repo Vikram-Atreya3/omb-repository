@@ -87,7 +87,8 @@ public class LocalWorker implements Worker, ConsumerCallback {
         List<Topic> topics = new ArrayList<>();
         for (int i = 0; i < topicsInfo.numberOfTopics; i++) {
             String topicName = Optional.ofNullable(topicsInfo.topicName)
-                    .orElse(String.format("%s-%s-%04d", benchmarkDriver.getTopicNamePrefix(), RandomGenerator.getRandomString(), i));
+                    .orElse(String.format("%s-%s-%04d", topicsInfo.topicPrefix != null ? topicsInfo.topicPrefix : benchmarkDriver.getTopicNamePrefix(),
+                            RandomGenerator.getRandomString(), i));
             Topic topic = new Topic(topicName,topicsInfo.numberOfPartitionsPerTopic);
             topics.add(topic);
             futures.add(benchmarkDriver.createTopic(topic.name, topic.partitions));
@@ -261,7 +262,7 @@ public class LocalWorker implements Worker, ConsumerCallback {
     }
 
     @Override
-    public void stopAll() throws IOException {
+    public synchronized void stopAll() throws IOException {
         testCompleted = true;
         consumersArePaused = false;
         producersArePaused = false;
@@ -272,16 +273,13 @@ public class LocalWorker implements Worker, ConsumerCallback {
             for (BenchmarkProducer producer : producers) {
                 producer.close();
             }
-            producers.clear();
 
             for (BenchmarkConsumer consumer : consumers) {
                 consumer.close();
             }
-            consumers.clear();
 
             if (benchmarkDriver != null) {
                 benchmarkDriver.close();
-                benchmarkDriver = null;
             }
         } catch (Exception e) {
             //Think about killing the program in-case the exception is non-recoverable.

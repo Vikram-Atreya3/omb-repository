@@ -22,13 +22,15 @@ public class TopicsInfo {
     public int numberOfTopics;
     public int numberOfPartitionsPerTopic;
     public String topicName;
+    public String topicPrefix;
 
     public TopicsInfo() {
     }
 
-    public TopicsInfo(int numberOfTopics, int numberOfPartitionsPerTopic, String topicName) {
+    public TopicsInfo(int numberOfTopics, int numberOfPartitionsPerTopic, String topicName, String topicPrefix) {
         this.numberOfTopics = numberOfTopics;
         this.numberOfPartitionsPerTopic = numberOfPartitionsPerTopic;
         this.topicName = topicName;
+        this.topicPrefix = topicPrefix;
     }
 }

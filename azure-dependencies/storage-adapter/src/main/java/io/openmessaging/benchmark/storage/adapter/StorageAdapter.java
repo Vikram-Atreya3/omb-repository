@@ -1,5 +1,6 @@
 package io.openmessaging.benchmark.storage.adapter;
 
+import com.azure.core.util.HttpClientOptions;
 import com.azure.identity.DefaultAzureCredentialBuilder;
 import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerAsyncClient;
@@ -27,6 +28,7 @@ public class StorageAdapter {
 
         return  new BlobContainerClientBuilder()
                 .endpoint(containerEndpoint)
+                .clientOptions(new HttpClientOptions().setMaximumConnectionPoolSize(1000))
                 .credential(new DefaultAzureCredentialBuilder().build())
                 .buildAsyncClient();
     }
