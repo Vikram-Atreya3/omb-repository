@@ -27,8 +27,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletionException;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -196,18 +198,27 @@ public class DistributedWorkersEnsemble implements Worker {
             });
   }
 
-  @Override
-  public void stopAll() throws IOException {
-    workers.parallelStream()
-        .forEach(
-            worker -> {
-              try {
-                worker.stopAll();
-              } catch (IOException e) {
-                throw new RuntimeException(e);
-              }
-            });
-  }
+    @Override
+    public void stopAll() throws IOException {
+        List<Worker> timedOutWorkers = Collections.synchronizedList(new ArrayList<>());
+        workers.parallelStream()
+                .forEach(
+                        worker -> {
+                            try {
+                                worker.stopAll();
+                            } catch (CompletionException | IOException e) {
+                                log.info("Completion/IO Exception was caught - {}", e.getCause().toString());
+                                log.error("Worker has thrown Completion/Connect exception - {}", e.getMessage());
+                                timedOutWorkers.add(worker);
+                            } catch (Exception e) {
+                                log.info("Other Exception was caught - {}", e.getCause().toString());
+                            }
+                        });
+        if (!timedOutWorkers.isEmpty()) {
+            log.info("Removing Timedout Workers");
+            workers.removeAll(timedOutWorkers);
+        }
+    }
 
   @Override
   public void pauseConsumers() throws IOException {
