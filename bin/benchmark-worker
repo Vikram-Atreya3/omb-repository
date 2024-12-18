@@ -16,7 +16,7 @@
 if [ -d "./lib" ]; then
         CLASSPATH=$CLASSPATH:lib/*
 else
-    CLASSPATH=benchmark-framework/target/classes:`cat benchmark-framework/target/classpath.txt`
+    CLASSPATH=omb/target/classes:`cat omb/target/classpath.txt`
 fi
 
 if [ -z "$HEAP_OPTS" ]
@@ -26,4 +26,4 @@ fi
 
 JVM_MEM="${HEAP_OPTS} -XX:+UseG1GC"
 
-exec java -server -cp $CLASSPATH $JVM_MEM io.openmessaging.benchmark.worker.BenchmarkWorker $*
+exec java -server -cp $CLASSPATH $JVM_MEM microsoft.azure.eventhub.perftesting.framework.worker $*

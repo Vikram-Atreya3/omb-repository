@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration xmlns="http://logging.apache.org/log4j/2.0/config" name="messaging-benchmark-framework" status="INFO">
+    <Properties>
+        <Property name="log-path">Logs</Property>
+        <Property name="LOG_PATTERN">
+            %d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %m%n %throwable{4}
+        </Property>
+    </Properties>
+    <Appenders>
+        <Console name="ConsoleAppender" target="SySTEM_OUT">
+            <PatternLayout pattern= "${LOG_PATTERN}"/>
+        </Console>
+    </Appenders>
+    <Loggers>
+        <Logger name="com.azure" level="error" additivity="true">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Logger>
+        <Root level="info">
+            <AppenderRef ref="ConsoleAppender"/>
+        </Root>
+    </Loggers>
+</Configuration>
